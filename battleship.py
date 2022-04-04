@@ -1,4 +1,3 @@
-
 class BattleShip:
     ships_left = dict({5:2, 4: 2, 3:1})
 
@@ -54,25 +53,47 @@ class BattleShip:
             i+=1
         return index
 
+    def getHawkeyeCoord(self):
+        maxH = -1
+        hIndex = -1
+        i = 0
+        for row in self.opponent_board:
+            if row.count(-1) > maxH:
+                maxH = row.count(-1)
+                hIndex = i
+            i+=1
+        
+        maxY = -1
+        yIndex = -1
+        for col in range(10):
+            localCount = 0
+            for row in range(10):
+                if self.opponent_board[row][col] == -1:
+                    localCount += 1
+            if localCount > maxY:
+                maxY = localCount
+                yIndex = col
+
+        return (hIndex, yIndex)
 
     def attack(self):
+        if self.info == 1:
+            self.opponent_board = 1
+        elif self.info == 0:
+            self.opponent_board[self.lasthit[0]][self.lasthit[1]] = 0
+        elif self.info == 3:
+            sq = self.getHawkeyeCoord()
+            return sq
+        #Below code is for Random guess
         #need the lowest key
-        if self.info == -1 or self.info == 1:
-            min_ship = list(self.ships_left.keys()).sort()[0] #This gives us the least number to check for parity
-            self.parityFn(min_ship)
-            self.probs()
+        min_ship = list(self.ships_left.keys()).sort()[0] #This gives us the least number to check for parity
+        self.parityFn(min_ship)
+        self.probs()
 
-            square = self.indexOfMax()
-            self.lasthit = square
-            return square
-        
-        
-        
-
+        square = self.indexOfMax()
+        self.lasthit = square
+        return square
         # return (x, y)
-
-
-
     
     
     def probs(self):
@@ -98,10 +119,41 @@ class BattleShip:
                                                self.heatmap[row+j][col]+=1
                                             else: #orientation 0
                                                 self.heatmap[row][col+j]+=1
+                            elif self.opponent_board[row][col] == 0: #It has been hit
+                                right = left = top = bottom = False
+                                if row > 0 and self.opponent_board[row-1][col] == -1 :
+                                    bottom = True #True meaning not yet hit
+                                elif row<9 and self.opponent_board[row+1][col] == -1 :
+                                    top = True
+                                elif col < 9 and self.opponent_board[row][col+1] == -1:
+                                    right = True
+                                elif col > 0 and self.opponent_board[row][col-1] == -1:
+                                    left = True
+                                else:
+                                    pass
+
+                                #if all 4 are free, then increase all
+                                if bottom == True and top == True and left == True and right == True:
+                                    self.heatmap[row-1][col] += 999
+                                    self.heatmap[row+1][col] += 999
+                                    self.heatmap[row][col-1] += 999
+                                    self.heatmap[row][col+1] += 999
+                                elif bottom == True and top == True: #If only bottom and top are empty (Horizontally hit happened)
+                                    if right == True: #If right wasnt hit
+                                        self.heatmap[row][col+1] += 999
+                                    else: #If left wasn't hit
+                                        self.heatmap[row][col-1] += 999
+                                elif right == True and left == True:
+                                    if bottom == True:
+                                        self.heatmap[row-1][col] += 999
+                                    else:
+                                        self.heatmap[row+1][col] += 999
+
                             col+=1
                         row+=1
+        return   
 
-        return                
+             
     def parityFn(self, least):
         smallest = least
         # 3 element parity 
@@ -109,9 +161,6 @@ class BattleShip:
             for j in range(0,10):
                 self.parity[i][j] = (10*i+j)%smallest
                 
-
-
-
     def hit_or_miss(self, x, y, info):
         self.info = info
         # info = 1 for miss, 0 for a hit, -1 for an out of range shooting, 2 for special move nullify. 3 for your next move to be a Hawkeye Shot
